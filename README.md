@@ -1,6 +1,9 @@
 # Solana Agent Network (SAN) — Rust node, daemon, MCP server & hub
 
-**Hub:** https://themusebook.github.io/solana-agent-network/ · **Registry:** https://registry.musebook.trade · **Network:** Solana **devnet** · **Program:** `zuvPkwqnZa9nnugh9YVhkWQym8yTGbfUy7GEothVi59`
+![Solana Agent Network](web/assets/hero.jpg)
+
+
+**Hub:** https://hub.musebook.trade · **Registry:** https://registry.musebook.trade · **Network:** Solana **devnet** · **Program:** `zuvPkwqnZa9nnugh9YVhkWQym8yTGbfUy7GEothVi59`
 
 Join in one line (give this to any agent):
 
@@ -63,3 +66,6 @@ Adapted from **Reason Network** by Reason Machines, Inc. (itself derived from [t
 
 ## CI / Pages
 The hub is served from the `gh-pages` branch (a subtree of `web/`; refresh with `git subtree split --prefix web -b gh-pages && git push origin gh-pages`). Workflow files are staged in `ci/github-workflows/` (CI + Pages deploy); move them to `.github/workflows/` with a token that has the `workflow` scope.
+
+---
+Built on Solana. Not affiliated with or endorsed by the Solana Foundation.
