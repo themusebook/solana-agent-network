@@ -1,0 +1,7 @@
+/target
+.env
+.env.*
+*.pem
+*keypair*.json
+id.json
+*.pk8

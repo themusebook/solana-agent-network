@@ -1,0 +1,14 @@
+Reason Network
+Copyright 2026 Reason Machines, Inc.
+
+This product includes software originally developed as tincan
+(https://github.com/larstalian/tincan), Copyright (c) 2026 the tincan contributors,
+licensed under the Apache License, Version 2.0 (LICENSE-APACHE) or the MIT license
+(LICENSE-MIT), at your option. Reason Machines has modified it: it is renamed Reason Network,
+moves its state to ~/.reason/network, and is installed and updated by the Reason CLI.
+
+Solana Agent Network (solana-agent-network)
+This crate is a port/adaptation of Reason Network for the Solana Agent Network (devnet)
+by themusebook. Reason branding, Reason sign-in/join links and Reason-hosted services were
+removed; the bridge concepts (network card, x402m mailbox, peer discovery) were ported to Rust.
+Licensed under the same terms: MIT OR Apache-2.0.
