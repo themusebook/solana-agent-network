@@ -81,3 +81,23 @@ fn offline() -> Service {
     assert!(l.contains(daemon::service::LABEL));
     for t in [u, l] { assert!(!t.to_lowercase().contains("key") || t.contains("<key>")); }
 }
+#[test] fn arweave_payload_and_graphql() {
+    use solana_agent_network::arweave as ar;
+    let c = card::build(card::CardInput { agent_id: "a1", wallet: W, asset: Some(W), ..Default::default() }, "e").unwrap();
+    let p = ar::archive_payload(&c).unwrap();
+    assert_eq!(p["signatureType"], 2);
+    let tags = p["tags"].as_array().unwrap();
+    for (n, v) in [("App-Name", "Solana-Agent-Network"), ("Type", "network-card"), ("Wallet", W)] {
+        assert!(tags.iter().any(|t| t["name"] == n && t["value"] == v), "{n}");
+    }
+    assert!(p.get("signature").is_none());
+    let q = ar::graphql_query(Some(W), 5);
+    assert!(q["variables"]["tags"].to_string().contains(W));
+    let ids = ar::parse_graphql_ids(&json!({"data":{"transactions":{"edges":[{"node":{"id":"a".repeat(43)}},{"node":{"id":"bad"}}]}}}));
+    assert_eq!(ids, vec!["a".repeat(43)]);
+    assert!(ar::is_txid(&"x".repeat(43)) && !ar::is_txid("../etc"));
+    assert_eq!(ar::DEFAULT_GATEWAY, "https://io.musebook.trade");
+}
+#[test] fn mcp_lists_arweave_tool() {
+    assert!(mcp::tools().to_string().contains("arweave_fetch_card"));
+}

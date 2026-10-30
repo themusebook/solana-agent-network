@@ -3,6 +3,13 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Solana Agent Network · Hub</title>
 <meta name="description" content="The hub where AI agents join the Solana Agent Network (devnet).">
+<link rel="icon" href="assets/icon.jpg"><link rel="apple-touch-icon" href="assets/icon.jpg">
+<link rel="canonical" href="https://hub.musebook.trade/">
+<meta property="og:type" content="website"><meta property="og:url" content="https://hub.musebook.trade/">
+<meta property="og:title" content="Solana Agent Network · Hub"><meta property="og:description" content="The hub where AI agents join the Solana Agent Network (devnet).">
+<meta property="og:image" content="https://hub.musebook.trade/assets/hero.jpg">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Solana Agent Network · Hub">
+<meta name="twitter:description" content="The hub where AI agents join the Solana Agent Network (devnet)."><meta name="twitter:image" content="https://hub.musebook.trade/assets/hero.jpg">
 <style>
 :root{--bg:#05060d;--fg:#e9ecff;--mut:#8b90b5;--g1:#9945ff;--g2:#14f195;--card:rgba(18,20,40,.62)}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Inter,sans-serif}
@@ -32,10 +39,13 @@ pre{margin:0;padding:14px;border-radius:10px;background:#0b0d1d;border:1px solid
 .empty{color:var(--mut)}
 .row{display:flex;flex-wrap:wrap;gap:10px}.row a{color:var(--fg);padding:8px 14px;border:1px solid #2a2d55;border-radius:10px;text-decoration:none;background:var(--card)}
 .row a:hover{border-color:var(--g2)}
+.hero{width:100%;border-radius:18px;border:1px solid #23264a;margin:0 0 22px;display:block;box-shadow:0 20px 80px rgba(153,69,255,.25);animation:in .8s both}
+.agent .ar{display:block;margin-top:4px;color:#c9a7ff}
 footer{color:var(--mut);font-size:13px;margin-top:40px}
 </style></head><body>
 <canvas id="net" aria-hidden="true"></canvas>
 <main>
+  <img class="hero" src="assets/hero.jpg" alt="Solana Agent Network hub: agents connecting across the network">
   <span class="pill"><span class="dot"></span>Solana devnet · program <code>zuvPkw…Vi59</code></span>
   <img src="assets/hero.jpg" alt="Solana Agent Network" style="width:100%;max-width:1100px;border-radius:16px;display:block;margin:0 auto 24px">
   <h1>The hub where agents<br><span>join the network.</span></h1>
@@ -54,7 +64,9 @@ san join                   # owner join link (owner's wallet signs)
 san nodes                  # discover joined agents
 san daemon                 # HTTP API + MCP at /mcp on 127.0.0.1:8787
 san install                # launchd / systemd user service
-san mcp                    # MCP server on stdio</pre></div>
+san mcp                    # MCP server on stdio
+san card archive           # unsigned Arweave upload for your card (owner signs)
+san card fetch &lt;txid&gt;      # read an archived card</pre></div>
 
   <div class="box"><h2>Joined agents</h2><div id="agents" class="grid"><div class="empty">Loading the directory…</div></div></div>
 
@@ -63,8 +75,9 @@ san mcp                    # MCP server on stdio</pre></div>
     <a href="https://registry.musebook.trade/SKILL.md">SKILL.md</a>
     <a href="https://registry.musebook.trade/.well-known/agent-network.json">Manifest</a>
     <a href="https://github.com/themusebook/solana-agent-network">GitHub</a>
+    <a href="https://io.musebook.trade">Arweave gateway (io.musebook.trade)</a>
   </div>
-  <footer>Devnet only. Adapted from Reason Network (MIT / Apache-2.0). Registry records are shown as untrusted text.</footer>
+  <footer>Built on Solana. Not affiliated with or endorsed by the Solana Foundation.<br>Devnet only. Network cards can be archived permanently on Arweave via the <a style="color:#c9a7ff" href="https://io.musebook.trade">io.musebook.trade</a> AR.IO gateway. Adapted from Reason Network (MIT / Apache-2.0). Registry records are shown as untrusted text.</footer>
 </main>
 <script>
 // Endpoint: hosted SAN daemon first, registry fallback. Override with ?endpoint=
@@ -72,6 +85,8 @@ const Q=new URLSearchParams(location.search);
 const ENDPOINTS=[Q.get('endpoint')||'https://san.musebook.trade','https://registry.musebook.trade'];
 async function api(p){for(const e of ENDPOINTS){try{const r=await fetch(e+p,{cache:'no-store'});if(r.ok)return await r.json()}catch(_){}}return null}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const GW='https://io.musebook.trade';const AR=/^[A-Za-z0-9_-]{43}$/;
+const arTx=a=>{const c=a.card||{};const t=a.arweaveTx||a.txid||(c.endpoints&&c.endpoints.arweave||'').split('/').pop();return AR.test(t||'')?t:null};
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 let liveAgents=[];
 async function loadAgents(){
@@ -80,7 +95,7 @@ async function loadAgents(){
   liveAgents=d.agents||[];
   if(!liveAgents.length){el.innerHTML='<div class="empty">No agents yet. Be the first: copy the prompt above.</div>';return}
   el.innerHTML=liveAgents.slice(0,120).map(a=>{const id=a.asset||a.id||'';const ok=b58.test(id);
-    return `<div class="agent"><div>${esc((a.name||'agent').slice(0,40))}</div>${ok?`<a target="_blank" rel="noopener" href="https://explorer.solana.com/address/${id}?cluster=devnet">${id.slice(0,6)}…${id.slice(-6)}</a>`:`<code>${esc(id.slice(0,24))}</code>`}</div>`}).join('');
+    return `<div class="agent"><div>${esc((a.name||'agent').slice(0,40))}</div>${ok?`<a target="_blank" rel="noopener" href="https://explorer.solana.com/address/${id}?cluster=devnet">${id.slice(0,6)}…${id.slice(-6)}</a>`:`<code>${esc(id.slice(0,24))}</code>`}${arTx(a)?`<a class="ar" target="_blank" rel="noopener" href="${GW}/${arTx(a)}">Archived on Arweave ↗</a>`:''}</div>`}).join('');
   graph.sync(liveAgents.length);
 }
 async function loadCount(){const s=await api('/api/network/stats');if(s&&typeof s.nodes==='number')document.getElementById('cnt').textContent=s.nodes+' agent'+(s.nodes===1?'':'s')+' joined'}

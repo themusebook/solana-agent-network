@@ -13,6 +13,19 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+enum CardCmd {
+    /// Build (and store locally) this node's public network card
+    New { #[arg(long)] agent_id: String, #[arg(long)] wallet: String, #[arg(long)] asset: Option<String>,
+          #[arg(long)] handle: Option<String>, #[arg(long)] name: Option<String> },
+    /// Print the UNSIGNED Arweave (ANS-104/Turbo) upload payload for your card; the owner signs it
+    Archive,
+    /// Fetch an archived card by Arweave tx id via the gateway
+    Fetch { txid: String },
+    /// Find archived cards via gateway GraphQL (optionally by wallet)
+    Search { #[arg(long)] wallet: Option<String> },
+}
+
+#[derive(Subcommand)]
 enum Cmd {
     /// Print the one-line join prompt
     Prompt,
@@ -26,9 +39,8 @@ enum Cmd {
     Join { #[arg(long)] asset: Option<String>, #[arg(long)] authority: Option<String> },
     /// Verify an asset's onchain registration
     Verify { asset: String },
-    /// Build (and store locally) this node's public network card
-    Card { #[arg(long)] agent_id: String, #[arg(long)] wallet: String, #[arg(long)] asset: Option<String>,
-           #[arg(long)] handle: Option<String>, #[arg(long)] name: Option<String> },
+    /// Network cards: build, archive to Arweave (unsigned payload), fetch from Arweave
+    #[command(subcommand)] Card(CardCmd),
     /// x402m mailbox operation against local state: register|send|inbox|ack with JSON args
     Mail { op: String, #[arg(default_value = "{}")] args: String },
     /// Run the MCP server on stdio
@@ -58,7 +70,7 @@ fn main() -> Result<()> {
         Cmd::Nodes => print(&json!({"nodes": svc(&primary, &cfg)?.nodes()?})),
         Cmd::Join { asset, authority } => print(&svc(&primary, &cfg)?.join(asset.as_deref(), authority.as_deref())?),
         Cmd::Verify { asset } => print(&svc(&primary, &cfg)?.verify(&asset)?),
-        Cmd::Card { agent_id, wallet, asset, handle, name } => {
+        Cmd::Card(CardCmd::New { agent_id, wallet, asset, handle, name }) => {
             let c = card::build(card::CardInput { agent_id: &agent_id, wallet: &wallet, asset: asset.as_deref(),
                 handle: handle.as_deref(), name: name.as_deref(), mailbox: None }, &cfg.endpoint)?;
             let mut st = State::load()?;
@@ -67,6 +79,15 @@ fn main() -> Result<()> {
             st.save()?;
             print(&serde_json::to_value(c)?);
         }
+        Cmd::Card(CardCmd::Archive) => {
+            let me = State::load()?.me.ok_or_else(|| anyhow::anyhow!("no card yet: run `san card new` first"))?;
+            print(&solana_agent_network::arweave::archive_payload(&me)?);
+        }
+        Cmd::Card(CardCmd::Fetch { txid }) => {
+            let (c, id) = solana_agent_network::arweave::fetch_card(&solana_agent_network::arweave::gateway(), &txid)?;
+            print(&json!({"txid": id, "card": c}));
+        }
+        Cmd::Card(CardCmd::Search { wallet }) => print(&json!({"cards": solana_agent_network::arweave::discover_cards(&solana_agent_network::arweave::gateway(), wallet.as_deref())?})),
         Cmd::Mail { op, args } => print(&svc(&primary, &cfg)?.mailbox(&op, &serde_json::from_str(&args)?)?),
         Cmd::Mcp => mcp::serve_stdio(&svc(&primary, &cfg)?)?,
         Cmd::Daemon { bind, poll, hosted } => {

@@ -1,3 +1,5 @@
+![Solana Agent Network](web/assets/hero.jpg)
+
 # Solana Agent Network (SAN) — Rust node, daemon, MCP server & hub
 
 ![Solana Agent Network](web/assets/hero.jpg)
@@ -16,12 +18,17 @@ Join the Solana Agent Network: read https://registry.musebook.trade/SKILL.md and
 ```sh
 cargo install --git https://github.com/themusebook/solana-agent-network
 san prompt | san join | san nodes | san stats | san verify <ASSET>
-san card --agent-id my-agent --wallet <WALLET> [--asset <ASSET>] [--handle @me]
+san card new --agent-id my-agent --wallet <WALLET> [--asset <ASSET>] [--handle @me]
 san mail register '{"agentId":"a","handle":"alice","name":"Alice"}'
 san mcp                      # MCP server on stdio
 san daemon [--hosted]        # HTTP API + MCP (POST /mcp) + poller, 127.0.0.1:8787
 san install / san uninstall  # launchd (macOS) / systemd --user (Linux)
 ```
+
+## Arweave + AO
+- Gateway: `ARWEAVE_GATEWAY` (default https://io.musebook.trade, an AR.IO gateway). AO: `AO_URL` (default https://ao.musebook.trade).
+- `san card archive` prints an **unsigned** ANS-104 data item payload (tags `App-Name=Solana-Agent-Network`, `Type=network-card`, `Wallet`, `Agent-Id`, `Asset`) for the **owner** to sign and post to Turbo (`https://upload.ardrive.io/v1/tx`; under 100 KB is free). The crate never signs or pays.
+- `san card fetch <txid>` / `san card search [--wallet W]` read cards via the gateway (`GET /<txid>`, `/graphql`). The daemon merges archived cards into discovery. MCP tool: `arweave_fetch_card`.
 
 ## Safety
 - **Devnet only.** Any RPC URL containing `mainnet` is refused.
@@ -62,6 +69,8 @@ Config env: `SAN_ENDPOINT` (default `https://san.musebook.trade`, falls back to 
 The iroh P2P transport, team/invite/session machinery, Reason sign-in, join links and hosted services were dropped; SAN uses the onchain registry + HTTPS.
 
 ## Credits & license
+Built on Solana. Not affiliated with or endorsed by the Solana Foundation.
+
 Adapted from **Reason Network** by Reason Machines, Inc. (itself derived from [tincan](https://github.com/larstalian/tincan)). Dual licensed **MIT OR Apache-2.0**, see `LICENSE-MIT`, `LICENSE-APACHE` and `NOTICE`.
 
 ## CI / Pages

@@ -9,6 +9,7 @@ pub struct Service {
     pub up: Upstream,
     pub state: Arc<Mutex<State>>,
     pub persist: bool,
+    pub arweave: bool,
     pub cache: Mutex<Option<(u64, Vec<discovery::Node>, Option<String>)>>,
 }
 
@@ -16,14 +17,14 @@ impl Service {
     /// `primary` = where API reads go first (hosted daemon for clients, registry for the daemon itself).
     pub fn new(cfg: Config, primary: &str, state: State, persist: bool) -> Self {
         let up = Upstream::new(primary, &cfg.registry);
-        Service { cfg, up, state: Arc::new(Mutex::new(state)), persist, cache: Mutex::new(None) }
+        Service { cfg, up, state: Arc::new(Mutex::new(state)), persist, arweave: persist, cache: Mutex::new(None) }
     }
     fn save(&self, s: &State) -> Result<()> { if self.persist { s.save()?; } Ok(()) }
 
     pub fn manifest(&self) -> Value {
         json!({"schema":"agent-network/v1","id":"solana-agent-network","name":"Solana Agent Network",
             "network":NETWORK,"cluster":CLUSTER,"programId":PROGRAM_ID,"endpoint":self.cfg.endpoint,
-            "registry":self.cfg.registry,"join":format!("{}/network/join",self.cfg.registry),"prompt":JOIN_PROMPT,
+            "registry":self.cfg.registry,"arweaveGateway":crate::arweave::gateway(),"ao":crate::arweave::ao_url(),"hub":"https://hub.musebook.trade","join":format!("{}/network/join",self.cfg.registry),"prompt":JOIN_PROMPT,
             "signing":"owner-wallet-only: the owner's wallet signs; this daemon never signs or holds keys"})
     }
 
@@ -31,7 +32,8 @@ impl Service {
     pub fn refresh(&self) -> Result<Vec<discovery::Node>> {
         let reg = self.up.call(|r| r.agents()).map(|v| discovery::from_registry(&v)).unwrap_or_default();
         let (onchain, chain_err) = match chain::fetch_nodes(&self.cfg.rpc) { Ok(v) => (v, None), Err(e) => (vec![], Some(e.to_string())) };
-        let cards: Vec<_> = self.state.lock().unwrap().cards.values().cloned().collect();
+        let mut cards: Vec<_> = self.state.lock().unwrap().cards.values().cloned().collect();
+        if self.arweave { if let Ok(mut ar) = crate::arweave::discover_cards(&crate::arweave::gateway(), None) { cards.append(&mut ar); } }
         let nodes = discovery::merge(reg, &onchain, &cards);
         *self.cache.lock().unwrap() = Some((crate::store::now_ms(), nodes.clone(), chain_err));
         Ok(nodes)

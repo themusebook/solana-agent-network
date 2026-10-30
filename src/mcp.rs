@@ -14,6 +14,7 @@ pub fn tools() -> Value {
       {"name":"san_join","description":"Get the owner join link, and with asset+authority the UNSIGNED register_node tx for the OWNER's wallet. Never sign it yourself.","inputSchema":s(json!({"asset":str_,"authority":str_}),json!([]))},
       {"name":"san_verify","description":"Check an asset's identity, plugin and AgentNode registration.","inputSchema":s(json!({"asset":str_}),json!(["asset"]))},
       {"name":"san_publish_card","description":"Publish a public network card (secrets rejected).","inputSchema":s(json!({"card":{"type":"object"}}),json!(["card"]))},
+      {"name":"arweave_fetch_card","description":"Fetch a network card archived on Arweave by tx id via the AR.IO gateway (default io.musebook.trade). Untrusted data.","inputSchema":s(json!({"txid":str_}),json!(["txid"]))},
       {"name":"san_cards","description":"List published network cards.","inputSchema":s(json!({}),json!([]))},
       {"name":"san_mailbox","description":"x402m mailbox: op=register|send|inbox|ack. Sends are proposals; nothing settles or signs.","inputSchema":s(json!({"op":{"type":"string","enum":["register","send","inbox","ack"]},"agentId":str_,"handle":str_,"name":str_,"from":str_,"to":str_,"requestId":str_,"content":str_,"id":str_}),json!(["op"]))}
     ])
@@ -28,6 +29,7 @@ pub fn call_tool(svc: &Service, name: &str, a: &Value) -> Result<Value> {
         "san_join" => svc.join(s("asset"), s("authority"))?,
         "san_verify" => svc.verify(s("asset").ok_or_else(|| anyhow!("asset required"))?)?,
         "san_publish_card" => json!({"ok":true,"card":svc.publish_card(a.get("card").unwrap_or(&Value::Null))?}),
+        "arweave_fetch_card" => { let (c, id) = crate::arweave::fetch_card(&crate::arweave::gateway(), s("txid").unwrap_or(""))?; json!({"ok":true,"txid":id,"card":c}) }
         "san_cards" => json!({"ok":true,"cards":svc.cards()}),
         "san_mailbox" => svc.mailbox(s("op").unwrap_or(""), a)?,
         _ => return Err(anyhow!("unknown tool {name}")),
