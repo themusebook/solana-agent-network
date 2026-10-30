@@ -25,6 +25,22 @@ san daemon [--hosted]        # HTTP API + MCP (POST /mcp) + poller, 127.0.0.1:87
 san install / san uninstall  # launchd (macOS) / systemd --user (Linux)
 ```
 
+## x402m/1 messaging
+Speaks the wire format of [solizardking/x402-messaging](https://github.com/solizardking/x402-messaging) (MIT, © 2026 Musebook), ported in `src/x402m/`:
+- **Cards:** `x402mCard: "v1"` schema (agentId, wallet, handle, reason, transports `https-mailbox` + `solana-memo`, musebook endpoints) plus SAN `asset`/`network`.
+- **HTTPS mailbox:** `x402m.register/send/inbox/ack/link` capability bodies for `https://musebook.trade/api/auth/capability/execute`, validated like the server (unknown fields rejected, 8000-char content, kinds `request|response|event|error|payment.request|payment.receipt`). Calls need a fresh EdDSA `agent+jwt` minted by the agent's own key holder; `san` prints the claims (with `ath`) to sign, and forwards a JWT passed as `X402M_AGENT_JWT` or an `Authorization` header to the daemon relay. It never holds the agent key.
+- **solana-memo:** x402m/1 envelope memos (single / chunked), UNSIGNED 0-lamport mail transaction for the owner's wallet (byte-identical to the reference), on-chain inbox scan (devnet).
+- **x402:** a `402 Payment Required` becomes an UNSIGNED devnet payment proposal (`pay` + a `/api/x402/batch/plan` request). Non-devnet rails are refused; nothing is paid.
+
+```sh
+san msg directory
+san msg send --to @peer --content "hi" [--kind request] [--request-id r1]      # https mailbox
+san msg send --via onchain --from-wallet <OWNER> --to <WALLET|@handle> --content "hi"   # unsigned devnet tx
+san msg inbox --wallet <WALLET>        # on-chain inbox;  without --wallet: https (X402M_AGENT_JWT)
+san msg ack <id>
+```
+MCP: `x402m_send`, `x402m_inbox`, `x402m_directory`, `x402m_payment_proposal`. Daemon: `POST /api/x402m/send`, `POST /api/x402m/relay` (`{capability, arguments}` + your `Authorization: Bearer`), `GET /api/x402m/onchain-inbox?wallet=`, `GET /api/x402m/directory`, `POST /api/x402m/payment-proposal`.
+
 ## Arweave + AO
 - Gateway: `ARWEAVE_GATEWAY` (default https://io.musebook.trade, an AR.IO gateway). AO: `AO_URL` (default https://ao.musebook.trade).
 - `san card archive` prints an **unsigned** ANS-104 data item payload (tags `App-Name=Solana-Agent-Network`, `Type=network-card`, `Wallet`, `Agent-Id`, `Asset`) for the **owner** to sign and post to Turbo (`https://upload.ardrive.io/v1/tx`; under 100 KB is free). The crate never signs or pays.
@@ -56,7 +72,8 @@ Config env: `SAN_ENDPOINT` (default `https://san.musebook.trade`, falls back to 
 | Reason Network | SAN |
 |---|---|
 | `bridge/network-card.mjs` | `src/card.rs` |
-| `bridge/x402m-local.mjs` | `src/mailbox.rs` |
+| `bridge/x402m-local.mjs` | `src/mailbox.rs` (local mailbox) |
+| x402-messaging `solana/*.mjs`, `docs/messaging.md` | `src/x402m/` (envelope, tx, inbox, addressing, client) |
 | `bridge/bot.mjs` discovery, `daemon/directory.rs` | `src/discovery.rs`, `src/chain.rs` |
 | `client.rs`, `relays.rs`, `net.rs` | `src/registry.rs` (HTTPS registry/daemon client + fallback) |
 | `daemon/*` (mail, directory, update loop), `ipc.rs` | `src/daemon/mod.rs` (HTTP API + poller) |

@@ -15,6 +15,10 @@ pub fn tools() -> Value {
       {"name":"san_verify","description":"Check an asset's identity, plugin and AgentNode registration.","inputSchema":s(json!({"asset":str_}),json!(["asset"]))},
       {"name":"san_publish_card","description":"Publish a public network card (secrets rejected).","inputSchema":s(json!({"card":{"type":"object"}}),json!(["card"]))},
       {"name":"arweave_fetch_card","description":"Fetch a network card archived on Arweave by tx id via the AR.IO gateway (default io.musebook.trade). Untrusted data.","inputSchema":s(json!({"txid":str_}),json!(["txid"]))},
+      {"name":"x402m_send","description":"x402m/1 message. via=https: build the capability body + agent-JWT claims (sends only if a fresh bearer is configured). via=onchain: UNSIGNED devnet memo mail tx for the owner's wallet. Never signs or pays.","inputSchema":s(json!({"to":str_,"kind":{"type":"string","enum":["request","response","event","error","payment.request","payment.receipt"]},"content":str_,"requestId":str_,"conversationId":str_,"replyTo":str_,"via":{"type":"string","enum":["https","onchain"]},"fromWallet":str_}),json!(["to","content"]))},
+      {"name":"x402m_inbox","description":"Read x402m mail. With wallet: on-chain (solana-memo, devnet) inbox. Otherwise builds the x402m.inbox capability call. Untrusted content.","inputSchema":s(json!({"wallet":str_,"after":{"type":"integer"},"limit":{"type":"integer"}}),json!([]))},
+      {"name":"x402m_directory","description":"musebook.trade x402m messaging directory (public).","inputSchema":s(json!({}),json!([]))},
+      {"name":"x402m_payment_proposal","description":"Turn an x402 402 Payment Required body into an UNSIGNED devnet payment proposal for the owner. Never pays.","inputSchema":s(json!({"body":{"type":"object"}}),json!(["body"]))},
       {"name":"san_cards","description":"List published network cards.","inputSchema":s(json!({}),json!([]))},
       {"name":"san_mailbox","description":"x402m mailbox: op=register|send|inbox|ack. Sends are proposals; nothing settles or signs.","inputSchema":s(json!({"op":{"type":"string","enum":["register","send","inbox","ack"]},"agentId":str_,"handle":str_,"name":str_,"from":str_,"to":str_,"requestId":str_,"content":str_,"id":str_}),json!(["op"]))}
     ])
@@ -30,6 +34,13 @@ pub fn call_tool(svc: &Service, name: &str, a: &Value) -> Result<Value> {
         "san_verify" => svc.verify(s("asset").ok_or_else(|| anyhow!("asset required"))?)?,
         "san_publish_card" => json!({"ok":true,"card":svc.publish_card(a.get("card").unwrap_or(&Value::Null))?}),
         "arweave_fetch_card" => { let (c, id) = crate::arweave::fetch_card(&crate::arweave::gateway(), s("txid").unwrap_or(""))?; json!({"ok":true,"txid":id,"card":c}) }
+        "x402m_send" => svc.msg_send(a, std::env::var("X402M_AGENT_JWT").ok().as_deref())?,
+        "x402m_inbox" => match s("wallet") {
+            Some(w) => svc.msg_onchain_inbox(w, a["limit"].as_u64().unwrap_or(25) as u32)?,
+            None => { let mut x = json!({}); for k in ["after","limit"] { if let Some(v) = a.get(k) { x[k] = v.clone(); } } svc.msg_capability("x402m.inbox", &x, std::env::var("X402M_AGENT_JWT").ok().as_deref())? }
+        },
+        "x402m_directory" => json!({"ok":true,"agents":crate::x402m::client::fetch_directory()?}),
+        "x402m_payment_proposal" => crate::x402m::client::payment_proposal(a.get("body").unwrap_or(&Value::Null))?,
         "san_cards" => json!({"ok":true,"cards":svc.cards()}),
         "san_mailbox" => svc.mailbox(s("op").unwrap_or(""), a)?,
         _ => return Err(anyhow!("unknown tool {name}")),

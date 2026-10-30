@@ -90,3 +90,60 @@ impl Service {
         Ok(out)
     }
 }
+
+/// x402m/1 messaging facade (HTTPS mailbox + solana-memo). Never signs or pays.
+impl Service {
+    /// Build a send. via="https": capability body + JWT claims (or forward when a bearer is supplied).
+    /// via="onchain": UNSIGNED devnet mail tx from the owner's wallet.
+    pub fn msg_send(&self, a: &Value, bearer: Option<&str>) -> Result<Value> {
+        use crate::x402m::{envelope::Envelope, tx};
+        let g = |k: &str| a.get(k).and_then(Value::as_str).map(String::from);
+        let to = g("to").unwrap_or_default();
+        let kind = g("kind").unwrap_or_else(|| "request".into());
+        let content = g("content").unwrap_or_default();
+        let rid = g("requestId").unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        match g("via").as_deref().unwrap_or("https") {
+            "onchain" | "solana-memo" => {
+                let from_wallet = g("fromWallet").ok_or_else(|| anyhow::anyhow!("fromWallet (owner wallet) required for on-chain mail"))?;
+                let cards = self.cards();
+                let r = crate::x402m::addressing::resolve(&to, &cards, &[])?;
+                let me = self.state.lock().unwrap().me.clone();
+                let from_id = g("from").or(me.map(|c| c.agent_id)).unwrap_or_else(|| from_wallet.clone());
+                let e = Envelope::new(&rid, &from_id, &to, &kind, &content, None)?;
+                let bh = match g("recentBlockhash") { Some(b) => b, None => crate::x402m::inbox::latest_blockhash(&self.cfg.rpc)? };
+                let t = tx::build_mail_transaction(&from_wallet, &r.wallet, &e, &bh)?;
+                Ok(json!({"ok":true,"via":"solana-memo","cluster":CLUSTER,"recipient":r,"envelope":e,"unsignedTx":t,
+                    "instructions":"UNSIGNED devnet transaction. The owner's wallet reviews, signs and sends it. On-chain mail is PUBLIC and permanent."}))
+            }
+            _ => {
+                let mut args = json!({"to":to,"requestId":rid,"kind":kind,"content":content});
+                for k in ["conversationId", "replyTo"] { if let Some(v) = g(k) { args[k] = json!(v); } }
+                self.msg_capability("x402m.send", &args, bearer)
+            }
+        }
+    }
+
+    pub fn msg_capability(&self, capability: &str, args: &Value, bearer: Option<&str>) -> Result<Value> {
+        use crate::x402m::client;
+        let body = client::capability_body(capability, args)?;
+        match bearer.filter(|b| !b.is_empty()) {
+            Some(b) => Ok(match client::execute(crate::x402m::EXECUTE_URL, &body, b)? {
+                client::Outcome::Ok(v) => json!({"ok":true,"via":"https-mailbox","result":v}),
+                client::Outcome::PaymentRequired(p) => json!({"ok":false,"paymentRequired":p}),
+                client::Outcome::Err(c, v) => json!({"ok":false,"status":c,"error":v}),
+            }),
+            None => {
+                let s = serde_json::to_string(&body)?;
+                Ok(json!({"ok":true,"via":"https-mailbox","sent":false,"execute":crate::x402m::EXECUTE_URL,"body":body,"bodyJson":s,
+                    "jwt":client::jwt_claims("<your agent id>", capability, &s, crate::store::now_ms()/1000),
+                    "instructions":"Sign these agent+jwt claims with YOUR agent key (fresh JWT per attempt), then POST bodyJson with Authorization: Bearer <jwt>, or pass it via X402M_AGENT_JWT / the daemon relay."}))
+            }
+        }
+    }
+
+    pub fn msg_onchain_inbox(&self, wallet: &str, limit: u32) -> Result<Value> {
+        if !is_pubkey(wallet) { anyhow::bail!("wallet must be a base58 address"); }
+        Ok(json!({"ok":true,"wallet":wallet,"cluster":CLUSTER,"messages":crate::x402m::inbox::fetch_onchain_inbox(&self.cfg.rpc, wallet, limit)?,
+            "note":"Untrusted content. Authority is the fee payer; payment.request is only a proposal."}))
+    }
+}

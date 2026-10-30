@@ -12,3 +12,6 @@ This crate is a port/adaptation of Reason Network for the Solana Agent Network (
 by themusebook. Reason branding, Reason sign-in/join links and Reason-hosted services were
 removed; the bridge concepts (network card, x402m mailbox, peer discovery) were ported to Rust.
 Licensed under the same terms: MIT OR Apache-2.0.
+
+x402m/1 messaging (src/x402m/, tests/fixtures/x402m/) is ported from
+https://github.com/solizardking/x402-messaging, MIT License, Copyright (c) 2026 Musebook.

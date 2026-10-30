@@ -10,3 +10,4 @@ pub mod mcp;
 pub mod registry;
 pub mod service;
 pub mod store;
+pub mod x402m;

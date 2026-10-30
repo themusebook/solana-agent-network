@@ -1,0 +1,63 @@
+{
+  "from": "GmaDrppBC7P5ARKV8g3djiwP89vz1jLK23V2GBjuAEGB",
+  "to": "J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+  "blockhash": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+  "singleTxBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIE6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iz9FyQ4WqDHW2T7eM1gL6HZkf3r92sTxY7XAurINen2GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUpTWpkpIQZNJOhxYNo4fHw1td28kruB5B+oQEEFRI0DAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwICAgABDAIAAAAAAAAAAAAAAAMAnAF4NDAybS8xIHsidiI6MSwiaWQiOiJyZXEtMDAwMSIsImZyb20iOiJhZ2VudC1hbGljZSIsInRvIjoiYWdlbnQtYm9iIiwia2luZCI6InJlcXVlc3QiLCJjb250ZW50IjoiRG9lcyB0aGUgYmlsbGluZyB3ZWJob29rIHJldHJ5IG9uIDV4eD8iLCJ0cyI6MTc5MjQ3MjQwMDAwMH0=",
+  "envelope": {
+    "v": 1,
+    "id": "req-0001",
+    "from": "agent-alice",
+    "to": "agent-bob",
+    "kind": "request",
+    "content": "Does the billing webhook retry on 5xx?",
+    "ts": 1792472400000
+  },
+  "rpcTx": {
+    "slot": 250000001,
+    "blockTime": 1792472400,
+    "meta": {
+      "err": null,
+      "fee": 5000,
+      "loadedAddresses": {
+        "writable": [],
+        "readonly": []
+      }
+    },
+    "transaction": {
+      "signatures": [
+        "DojKwxnUhDMfqJr7ryzgD9FKnnNXbz1Axd1nUsCtk5v9NK2UKB3YVjYboRsJbTZiFFgmeRzkqjkkviAGGefeeBC"
+      ],
+      "message": {
+        "accountKeys": [
+          "GmaDrppBC7P5ARKV8g3djiwP89vz1jLK23V2GBjuAEGB",
+          "J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+          "11111111111111111111111111111111",
+          "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+        ],
+        "header": {
+          "numRequiredSignatures": 1,
+          "numReadonlySignedAccounts": 0,
+          "numReadonlyUnsignedAccounts": 2
+        },
+        "recentBlockhash": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+        "instructions": [
+          {
+            "programIdIndex": 2,
+            "accounts": [
+              0,
+              1
+            ],
+            "data": "3Bxs3zrfFUZbEPqZ"
+          },
+          {
+            "programIdIndex": 3,
+            "accounts": [],
+            "data": "ZPUo8BXFtMXS2n7VH2ihrZnJij4kYtYmsq8AU9RNCQQMzrsBN5brDxddhLPQS83LYWzs98wfabp6dKhwK1azdPDs7xU3h2gpd9X5QVvfznXPBdXsdZ8kNXTjftFkYvsb5PrYj2nXCH78hDYzBzvSVoxx33xehaTMHedwJ4b2jYf1Lq7BarkSk52Hv93vnx6owLvaSbnaCU5ekZHmD3jXz"
+          }
+        ]
+      }
+    },
+    "version": "legacy"
+  },
+  "signature": "DojKwxnUhDMfqJr7ryzgD9FKnnNXbz1Axd1nUsCtk5v9NK2UKB3YVjYboRsJbTZiFFgmeRzkqjkkviAGGefeeBC"
+}

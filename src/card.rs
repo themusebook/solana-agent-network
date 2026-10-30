@@ -14,15 +14,19 @@ pub const SECRET_FIELDS: &[&str] = &[
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkCard {
-    pub san_card: String,
+    /// x402m-messaging card schema version ("v1"); legacy `sanCard` accepted.
+    #[serde(rename = "x402mCard", alias = "sanCard")]
+    pub x402m_card: String,
     pub agent_id: String,
     pub wallet: String,
     #[serde(skip_serializing_if = "Option::is_none")] pub asset: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")] pub handle: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")] pub name: Option<String>,
-    pub network: String,
-    pub transports: Vec<String>,
-    pub endpoints: BTreeMap<String, String>,
+    /// Reason Network session address (x402m card field); kept for interop.
+    #[serde(skip_serializing_if = "Option::is_none")] pub reason: Option<String>,
+    #[serde(default = "devnet")] pub network: String,
+    #[serde(default)] pub transports: Vec<String>,
+    #[serde(default)] pub endpoints: BTreeMap<String, String>,
 }
 
 #[derive(Default)]
@@ -31,18 +35,22 @@ pub struct CardInput<'a> {
     pub handle: Option<&'a str>, pub name: Option<&'a str>, pub mailbox: Option<&'a str>,
 }
 
+fn devnet() -> String { NETWORK.into() }
+
 pub fn build(i: CardInput, endpoint: &str) -> Result<NetworkCard> {
     if i.agent_id.trim().is_empty() { bail!("network card requires agentId"); }
     if !is_pubkey(i.wallet) { bail!("network card requires a valid Solana wallet"); }
     if let Some(a) = i.asset { if !is_pubkey(a) { bail!("asset must be a base58 address"); } }
     let handle = i.handle.map(normalize_handle).transpose()?;
     let mut endpoints = BTreeMap::new();
-    endpoints.insert("mailbox".into(), i.mailbox.map(str::to_string).unwrap_or_else(|| format!("{endpoint}/api/san/mailbox")));
-    endpoints.insert("discovery".into(), format!("{endpoint}/api/network/agents"));
+    // x402m/1 defaults (musebook.trade), plus the SAN endpoint.
+    endpoints.insert("mailbox".into(), i.mailbox.map(str::to_string).unwrap_or_else(|| crate::x402m::EXECUTE_URL.into()));
+    endpoints.insert("discovery".into(), crate::x402m::AGENTS_URL.into());
+    endpoints.insert("san".into(), format!("{endpoint}/api/network/agents"));
     Ok(NetworkCard {
-        san_card: "v1".into(), agent_id: i.agent_id.into(), wallet: i.wallet.into(),
+        x402m_card: "v1".into(), reason: None, agent_id: i.agent_id.into(), wallet: i.wallet.into(),
         asset: i.asset.map(Into::into), handle, name: i.name.map(Into::into),
-        network: NETWORK.into(), transports: vec!["https-mailbox".into(), "x402m".into()], endpoints,
+        network: NETWORK.into(), transports: vec!["https-mailbox".into(), "solana-memo".into()], endpoints,
     })
 }
 

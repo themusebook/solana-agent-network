@@ -26,7 +26,23 @@ enum CardCmd {
 }
 
 #[derive(Subcommand)]
+enum MsgCmd {
+    /// Send x402m/1 mail. --via https (default) builds/forwards the capability call; --via onchain builds an UNSIGNED devnet memo tx
+    Send { #[arg(long)] to: String, #[arg(long)] content: String, #[arg(long, default_value = "request")] kind: String,
+           #[arg(long)] request_id: Option<String>, #[arg(long)] reply_to: Option<String>, #[arg(long)] conversation_id: Option<String>,
+           #[arg(long, default_value = "https")] via: String, #[arg(long)] from_wallet: Option<String> },
+    /// Read mail: --wallet W scans the on-chain (devnet) inbox; otherwise the HTTPS mailbox (needs X402M_AGENT_JWT)
+    Inbox { #[arg(long)] wallet: Option<String>, #[arg(long, default_value_t = 25)] limit: u32, #[arg(long)] after: Option<u64> },
+    /// Acknowledge an HTTPS mailbox message (needs X402M_AGENT_JWT)
+    Ack { id: String },
+    /// Public musebook.trade x402m directory
+    Directory,
+}
+
+#[derive(Subcommand)]
 enum Cmd {
+    /// x402m/1 messaging (musebook.trade mailbox + solana-memo)
+    #[command(subcommand)] Msg(MsgCmd),
     /// Print the one-line join prompt
     Prompt,
     /// Network manifest
@@ -88,6 +104,23 @@ fn main() -> Result<()> {
             print(&json!({"txid": id, "card": c}));
         }
         Cmd::Card(CardCmd::Search { wallet }) => print(&json!({"cards": solana_agent_network::arweave::discover_cards(&solana_agent_network::arweave::gateway(), wallet.as_deref())?})),
+        Cmd::Msg(m) => {
+            let s = svc(&primary, &cfg)?;
+            let jwt = std::env::var("X402M_AGENT_JWT").ok();
+            match m {
+                MsgCmd::Send { to, content, kind, request_id, reply_to, conversation_id, via, from_wallet } => {
+                    let a = json!({"to":to,"content":content,"kind":kind,"requestId":request_id,"replyTo":reply_to,"conversationId":conversation_id,"via":via,"fromWallet":from_wallet});
+                    print(&s.msg_send(&a, jwt.as_deref())?)
+                }
+                MsgCmd::Inbox { wallet: Some(w), limit, .. } => print(&s.msg_onchain_inbox(&w, limit)?),
+                MsgCmd::Inbox { wallet: None, limit, after } => {
+                    let mut a = json!({"limit": limit.clamp(1, 50)}); if let Some(x) = after { a["after"] = json!(x); }
+                    print(&s.msg_capability("x402m.inbox", &a, jwt.as_deref())?)
+                }
+                MsgCmd::Ack { id } => print(&s.msg_capability("x402m.ack", &json!({"id": id}), jwt.as_deref())?),
+                MsgCmd::Directory => print(&json!({"agents": solana_agent_network::x402m::client::fetch_directory()?})),
+            }
+        }
         Cmd::Mail { op, args } => print(&svc(&primary, &cfg)?.mailbox(&op, &serde_json::from_str(&args)?)?),
         Cmd::Mcp => mcp::serve_stdio(&svc(&primary, &cfg)?)?,
         Cmd::Daemon { bind, poll, hosted } => {
