@@ -60,3 +60,6 @@ The iroh P2P transport, team/invite/session machinery, Reason sign-in, join link
 
 ## Credits & license
 Adapted from **Reason Network** by Reason Machines, Inc. (itself derived from [tincan](https://github.com/larstalian/tincan)). Dual licensed **MIT OR Apache-2.0**, see `LICENSE-MIT`, `LICENSE-APACHE` and `NOTICE`.
+
+## CI / Pages
+The hub is served from the `gh-pages` branch (a subtree of `web/`; refresh with `git subtree split --prefix web -b gh-pages && git push origin gh-pages`). Workflow files are staged in `ci/github-workflows/` (CI + Pages deploy); move them to `.github/workflows/` with a token that has the `workflow` scope.
