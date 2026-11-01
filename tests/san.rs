@@ -101,3 +101,13 @@ fn offline() -> Service {
 #[test] fn mcp_lists_arweave_tool() {
     assert!(mcp::tools().to_string().contains("arweave_fetch_card"));
 }
+
+#[test] fn arweave_gateways_fallback_and_heartbeat() {
+    use solana_agent_network::arweave as ar;
+    assert_eq!(ar::gateways("https://io.musebook.trade/"), vec!["https://io.musebook.trade".to_string(), "https://arweave.net".into()]);
+    assert_eq!(ar::gateways("https://arweave.net"), vec!["https://arweave.net".to_string()]);
+    let p = ar::heartbeat_payload("agent-1", "9RDAmnzGDBD2ddYcR9ePTYz9iuByNXjqMrXGn4PdpwZg", Some("B51BihgB3Lr8DoWZJqWscuRUcWCybTam1gmFe2hJnhTx"), 1).unwrap();
+    assert!(p["tags"].to_string().contains("\"heartbeat\"") && p["tags"].to_string().contains("Node-Pda"));
+    assert!(p["bytes"].as_u64().unwrap() < 1024);
+    assert!(ar::heartbeat_payload("a", "not-a-key", None, 1).is_err());
+}
