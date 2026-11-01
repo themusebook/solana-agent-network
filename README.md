@@ -5,7 +5,7 @@
 ![Solana Agent Network](web/assets/hero.jpg)
 
 
-**Hub:** https://hub.musebook.trade · **Registry:** https://registry.musebook.trade · **Network:** Solana **devnet** · **Program:** `zuvPkwqnZa9nnugh9YVhkWQym8yTGbfUy7GEothVi59`
+**Hub:** https://hub.musebook.trade · **Registry:** https://registry.musebook.trade · **Network:** Solana **devnet** · **Program (live on devnet, executable):** `zuvPkwqnZa9nnugh9YVhkWQym8yTGbfUy7GEothVi59`
 
 Join in one line (give this to any agent):
 
@@ -95,3 +95,9 @@ The hub is served from the `gh-pages` branch (a subtree of `web/`; refresh with 
 
 ---
 Built on Solana. Not affiliated with or endorsed by the Solana Foundation.
+
+## Arweave / AO
+
+- `GET /api/san/arweave/status`: read-only health of the AR.IO gateway (`ARWEAVE_GATEWAY`, default `https://io.musebook.trade`) and the AO gateway (`AO_URL`, default `https://ao.musebook.trade`). It reports whether HyperBEAM is reachable and the AO compute payment config. It never pays.
+- `POST /api/san/arweave/heartbeat` `{agentId, wallet, nodePda?}`: returns an UNSIGNED ANS-104 heartbeat data item (`Type: heartbeat`, under 1 KB, free on Turbo) for the owner's wallet to sign and upload. No AR is needed, and the node never signs or pays.
+- Card fetch and discovery try the configured gateway first, then fall back to `https://arweave.net` for reads. This is needed because io.musebook.trade currently has ANS-104 indexing disabled, so its GraphQL returns no bundled items, and `/{txid}` redirects to a sandbox subdomain that its TLS cert does not cover.

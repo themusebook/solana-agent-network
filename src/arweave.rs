@@ -11,6 +11,10 @@ pub const DEFAULT_AO: &str = "https://ao.musebook.trade";
 pub const TURBO_UPLOAD: &str = "https://upload.ardrive.io/v1/tx";
 pub const APP_NAME: &str = "Solana-Agent-Network";
 pub const FREE_LIMIT: usize = 100 * 1024;
+/// Public read fallback. io.musebook.trade (AR.IO release 84) has ANS-104 unbundling/indexing disabled, so its
+/// GraphQL returns no bundled data items, and `/{txid}` 302s to a sandbox subdomain of ao.musebook.trade whose
+/// TLS cert does not cover it. Reads fall back here; nothing is ever written here.
+pub const FALLBACK_GATEWAY: &str = "https://arweave.net";
 
 pub fn gateway() -> String { env_or("ARWEAVE_GATEWAY", DEFAULT_GATEWAY) }
 pub fn ao_url() -> String { env_or("AO_URL", DEFAULT_AO) }
@@ -66,16 +70,84 @@ pub fn parse_graphql_ids(v: &Value) -> Vec<String> {
 
 pub fn fetch_card(gw: &str, txid: &str) -> Result<(NetworkCard, String)> {
     if !is_txid(txid) { bail!("not an Arweave tx id: {txid}"); }
-    let v: Value = ureq::get(&format!("{gw}/{txid}")).timeout(std::time::Duration::from_secs(20)).call()?.into_json()?;
-    let mut c = card::parse(&v)?;
-    c.endpoints.insert("arweave".into(), format!("{gw}/{txid}"));
-    Ok((c, txid.into()))
+    let mut last = anyhow!("no gateway");
+    for base in gateways(gw) {
+        // /raw/ skips the sandbox-subdomain redirect.
+        let url = format!("{base}/raw/{txid}");
+        match ureq::get(&url).timeout(std::time::Duration::from_secs(20)).call() {
+            Ok(r) => {
+                let v: Value = r.into_json()?;
+                let mut c = card::parse(&v)?;
+                c.endpoints.insert("arweave".into(), format!("{base}/{txid}"));
+                return Ok((c, txid.into()));
+            }
+            Err(e) => last = anyhow!("{url}: {e}"),
+        }
+    }
+    Err(last)
 }
 
-/// Discover archived cards via gateway GraphQL (max 50), skipping invalid ones.
+/// Tries the configured gateway first, then the public fallback if it returns nothing.
 pub fn discover_cards(gw: &str, wallet: Option<&str>) -> Result<Vec<NetworkCard>> {
-    let v: Value = ureq::post(&format!("{gw}/graphql")).timeout(std::time::Duration::from_secs(20))
-        .send_json(graphql_query(wallet, 50))?.into_json()?;
-    if let Some(e) = v.get("errors") { return Err(anyhow!("graphql: {e}")); }
-    Ok(parse_graphql_ids(&v).iter().filter_map(|id| fetch_card(gw, id).ok().map(|x| x.0)).collect())
+    let mut last = None;
+    for base in gateways(gw) {
+        let r = ureq::post(&format!("{base}/graphql")).timeout(std::time::Duration::from_secs(20)).send_json(graphql_query(wallet, 50));
+        let v: Value = match r { Ok(r) => r.into_json()?, Err(e) => { last = Some(anyhow!("graphql {base}: {e}")); continue; } };
+        if let Some(e) = v.get("errors") { last = Some(anyhow!("graphql {base}: {e}")); continue; }
+        let ids = parse_graphql_ids(&v);
+        if ids.is_empty() { continue; }
+        return Ok(ids.iter().filter_map(|id| fetch_card(gw, id).ok().map(|x| x.0)).collect());
+    }
+    match last { Some(e) => Err(e), None => Ok(vec![]) }
+}
+
+/// Configured gateway first, then the public fallback (deduplicated).
+pub fn gateways(gw: &str) -> Vec<String> {
+    let gw = gw.trim_end_matches('/').to_string();
+    if gw == FALLBACK_GATEWAY { vec![gw] } else { vec![gw, FALLBACK_GATEWAY.into()] }
+}
+
+/// Unsigned heartbeat data item: a tiny, permanent liveness record for an on-chain AgentNode.
+/// Same signing model as cards (owner wallet signs, Turbo free tier < 100 KB); never signed or paid here.
+pub fn heartbeat_payload(agent_id: &str, wallet: &str, node_pda: Option<&str>, ts_ms: u64) -> Result<Value> {
+    if agent_id.is_empty() || !crate::config::is_pubkey(wallet) { bail!("agentId and a base58 wallet are required"); }
+    let mut body = json!({"schema":"san-heartbeat/v1","agentId":agent_id,"wallet":wallet,"network":crate::config::NETWORK,
+        "programId":crate::config::PROGRAM_ID,"ts":ts_ms});
+    let mut tags: Vec<(&str, String)> = vec![("Content-Type", "application/json".into()), ("App-Name", APP_NAME.into()),
+        ("App-Version", env!("CARGO_PKG_VERSION").into()), ("Type", "heartbeat".into()), ("Network", crate::config::NETWORK.into()),
+        ("Wallet", wallet.into()), ("Agent-Id", agent_id.into())];
+    if let Some(p) = node_pda {
+        if !crate::config::is_pubkey(p) { bail!("nodePda must be base58"); }
+        body["nodePda"] = json!(p);
+        tags.push(("Node-Pda", p.into()));
+    }
+    let data = body.to_string();
+    let tags: Vec<Value> = tags.into_iter().map(|(n, v)| json!({"name":n,"value":v})).collect();
+    Ok(json!({"format":"ANS-104 data item (unsigned)","signatureType":2,"signer":"owner Solana wallet (ed25519)",
+        "upload":{"method":"POST","url":TURBO_UPLOAD,"contentType":"application/octet-stream"},"bytes":data.len(),"freeTier":true,
+        "tags":tags,"data":data,
+        "instructions":"Owner signs and POSTs to Turbo (free under 100 KB). No AR needed; this node never signs or pays."}))
+}
+
+fn probe(u: &str) -> Value {
+    match ureq::get(u).timeout(std::time::Duration::from_secs(10)).call() {
+        Ok(r) => { let code = r.status(); let v: Value = r.into_json().unwrap_or(Value::Null); json!({"ok":true,"status":code,"body":v}) }
+        Err(ureq::Error::Status(c, _)) => json!({"ok":false,"status":c}),
+        Err(e) => json!({"ok":false,"error":e.to_string()}),
+    }
+}
+
+/// Read-only health of the configured AR.IO gateway and AO gateway. Never pays the x402 compute quote.
+pub fn status(gw: &str, ao: &str) -> Value {
+    let info = probe(&format!("{gw}/ar-io/info"));
+    let s = probe(&format!("{ao}/gateway/api/status"));
+    json!({"ok":true,
+        "arweave":{"gateway":gw,"healthcheck":probe(&format!("{gw}/ar-io/healthcheck")),
+            "release":info.pointer("/body/release"),
+            "ans104Indexing":!info.pointer("/body/ans104IndexFilter/never").and_then(Value::as_bool).unwrap_or(false),
+            "fallback":FALLBACK_GATEWAY},
+        "ao":{"url":ao,"hyperbeamReachable":s.pointer("/body/services/hyperbeam/reachable"),
+            "arioReachable":s.pointer("/body/services/ario/reachable"),
+            "computePayments":s.pointer("/body/payments"),
+            "note":"AO compute at /gateway/ao/:process/compute?slot=N is x402-paid (testnet USDC on Base Sepolia); this node only reads status and never pays."}})
 }

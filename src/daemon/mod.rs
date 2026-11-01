@@ -24,6 +24,8 @@ pub fn route_with(svc: &Service, method: &str, url: &str, body: &Value, bearer: 
         ("GET", "/.well-known/agent-network.json") | ("GET", "/api/network/manifest") => svc.manifest(),
         ("GET", "/api/network/stats") => svc.stats()?,
         ("GET", "/api/network/agents") | ("GET", "/api/san/nodes") => json!({"ok":true,"agents":svc.nodes()?}),
+        ("GET", "/api/san/arweave/status") => crate::arweave::status(&crate::arweave::gateway(), &crate::arweave::ao_url()),
+        ("POST", "/api/san/arweave/heartbeat") => crate::arweave::heartbeat_payload(body["agentId"].as_str().unwrap_or(""), body["wallet"].as_str().unwrap_or(""), body["nodePda"].as_str(), crate::store::now_ms())?,
         ("GET", "/api/san/cards") => json!({"ok":true,"cards":svc.cards()}),
         ("POST", "/api/san/cards") => json!({"ok":true,"card":svc.publish_card(body)?}),
         ("GET", "/api/san/join") | ("GET", "/network/join") => svc.join(None, None)?,
