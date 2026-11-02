@@ -1,0 +1,448 @@
+{
+  "address": "EeZBH7PggMHuQoYjK9Lz6bsM7GvbmKk9pBn9dDxV57Tm",
+  "metadata": {
+    "name": "san_delegation",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "close",
+      "docs": [
+        "Current owner (or the delegate) closes a delegation and reclaims rent to the caller."
+      ],
+      "discriminator": [
+        98,
+        165,
+        201,
+        177,
+        108,
+        65,
+        206,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "closer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset",
+          "relations": [
+            "delegation"
+          ]
+        },
+        {
+          "name": "delegation",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "consume",
+      "docs": [
+        "Delegate records intended use; fails unless every scope check passes."
+      ],
+      "discriminator": [
+        65,
+        178,
+        141,
+        13,
+        95,
+        57,
+        76,
+        154
+      ],
+      "accounts": [
+        {
+          "name": "delegate",
+          "signer": true,
+          "relations": [
+            "delegation"
+          ]
+        },
+        {
+          "name": "asset",
+          "relations": [
+            "delegation"
+          ]
+        },
+        {
+          "name": "owner_state",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset"
+              }
+            ]
+          }
+        },
+        {
+          "name": "delegation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset"
+              },
+              {
+                "kind": "account",
+                "path": "delegate"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "program",
+          "type": "pubkey"
+        },
+        {
+          "name": "lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "grant",
+      "discriminator": [
+        145,
+        189,
+        68,
+        153,
+        161,
+        231,
+        76,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset"
+        },
+        {
+          "name": "delegate"
+        },
+        {
+          "name": "owner_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset"
+              }
+            ]
+          }
+        },
+        {
+          "name": "delegation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset"
+              },
+              {
+                "kind": "account",
+                "path": "delegate"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "programs",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "spend_cap_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "revoke_all",
+      "docs": [
+        "Owner bumps the nonce: every existing delegation for this asset is void at once."
+      ],
+      "discriminator": [
+        147,
+        196,
+        234,
+        31,
+        86,
+        199,
+        8,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "asset"
+        },
+        {
+          "name": "owner_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Delegation",
+      "discriminator": [
+        237,
+        90,
+        140,
+        159,
+        124,
+        255,
+        243,
+        80
+      ]
+    },
+    {
+      "name": "OwnerState",
+      "discriminator": [
+        234,
+        56,
+        107,
+        216,
+        144,
+        52,
+        54,
+        244
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotCoreAsset",
+      "msg": "not an MPL Core asset"
+    },
+    {
+      "code": 6001,
+      "name": "NotOwner",
+      "msg": "signer is not the asset owner"
+    },
+    {
+      "code": 6002,
+      "name": "BadAllowlist",
+      "msg": "allowlist must have 1-4 programs"
+    },
+    {
+      "code": 6003,
+      "name": "Expired",
+      "msg": "delegation expired"
+    },
+    {
+      "code": 6004,
+      "name": "Transferred",
+      "msg": "asset transferred: delegation void"
+    },
+    {
+      "code": 6005,
+      "name": "Revoked",
+      "msg": "delegation revoked"
+    },
+    {
+      "code": 6006,
+      "name": "NotAllowlisted",
+      "msg": "program not allowlisted"
+    },
+    {
+      "code": 6007,
+      "name": "CapExceeded",
+      "msg": "spend cap exceeded"
+    }
+  ],
+  "types": [
+    {
+      "name": "Delegation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner_at_grant",
+            "type": "pubkey"
+          },
+          {
+            "name": "programs",
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
+          },
+          {
+            "name": "n_programs",
+            "type": "u8"
+          },
+          {
+            "name": "spend_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "spent_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OwnerState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "revoke_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
