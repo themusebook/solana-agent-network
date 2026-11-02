@@ -1,4 +1,5 @@
 //! Solana Agent Network (devnet). Adapted from Reason Network (MIT OR Apache-2.0); see NOTICE.
+pub mod agent;
 pub mod arweave;
 pub mod card;
 pub mod chain;
