@@ -2,7 +2,7 @@ import fs from 'fs'; import * as A from '@coral-xyz/anchor'; import { Keypair, C
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'; import { keypairIdentity, generateSigner, publicKey } from '@metaplex-foundation/umi';
 import { mplCore, create, transfer, fetchAsset } from '@metaplex-foundation/mpl-core'; import { fromWeb3JsKeypair } from '@metaplex-foundation/umi-web3js-adapters';
 const conn = new Connection('https://api.devnet.solana.com','confirmed');
-const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync('process.env.DEVNET_PAYER /* path to a devnet keypair file */'))));
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(process.env.DEVNET_PAYER /* path to a devnet keypair file */))));
 const owner = Keypair.generate(), dlg = Keypair.generate(), newOwner = Keypair.generate();
 const out = {}; fs.writeFileSync('.throwaway.json', JSON.stringify([owner,dlg].map(k=>Array.from(k.secretKey))), {mode:0o600});
 const send = async (tx, signers) => { const s = await conn.sendTransaction(tx, signers); await conn.confirmTransaction(s,'confirmed'); return s; };
@@ -23,8 +23,13 @@ out.grant = await prog.methods.grant([allowed], new A.BN(1000), new A.BN(Math.fl
 out.grantCostLamports = b0 - await conn.getBalance(owner.publicKey);
 out.delegationSpace = (await conn.getAccountInfo(delegation)).data.length; out.ownerStateSpace = (await conn.getAccountInfo(ownerState)).data.length;
 const consume = (p, l) => prog.methods.consume(p, new A.BN(l)).accounts({delegate:dlg.publicKey,asset:assetPk}).signers([dlg]).rpc();
-const expectFail = async (name, f) => { try { await f(); out[name] = 'UNEXPECTED_OK'; } catch (e) { out[name] = 'rejected: ' + (String(e.error?.errorCode?.code ?? e.message).slice(0,60)); } };
+const expectFail = async (name, f) => { try { await f(); out[name] = 'UNEXPECTED_OK'; } catch (e) { out[name] = 'rejected: ' + (String(e.error?.errorCode?.code ?? e.logs?.find(l=>l.includes('Error Code')) ?? e.message).slice(0,60)); } };
 out.consumeOk = await consume(allowed, 600);
+out.revokeAll = await prog.methods.revokeAll().accounts({owner:owner.publicKey,asset:assetPk}).rpc();
+await expectFail('consumeAfterRevoke', () => consume(allowed, 1));
+out.closeRevoked = await prog.methods.close().accounts({closer:owner.publicKey,asset:assetPk,delegation}).rpc();
+out.regrantAfterRevoke = await prog.methods.grant([allowed], new A.BN(1000), new A.BN(Math.floor(Date.now()/1000)+3600)).accounts({owner:owner.publicKey,asset:assetPk,delegate:dlg.publicKey}).rpc();
+out.consumeAfterRegrant = await consume(allowed, 600);
 await expectFail('consumeOverCap', () => consume(allowed, 600));
 await expectFail('consumeNotAllowlisted', () => consume(SystemProgram.programId, 1));
 out.transferAsset = bs58.encode((await transfer(umi,{asset: await fetchAsset(umi, asset.publicKey), newOwner: publicKey(newOwner.publicKey.toBase58())}).sendAndConfirm(umi)).signature);

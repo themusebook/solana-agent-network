@@ -23,4 +23,13 @@ Instructions: `grant`, `consume` (the delegate records use; it fails unless ever
 - Asset transfer: `5nMxdWJ2ZH9hrGg1Y6Thpi2WuecB9P9C8VBxKkMGD47SdKhJvLZPRKXpQpBsLuqDNdRkf78s1GF5izt7LNaub3NJ`. `consume` was then rejected with `Transferred`.
 - `close` by the delegate reclaimed the rent: `4Yc5sxbcG2niuAWmsyov8jJrwuiRQACTJnK5JCqGQ1q834htfkZNfbaXWZNBTG3ktnERVtEZYhCXhRZC5geaZxQh`
 
-`revoke_all` is not yet exercised on chain. There is no audit. Devnet only.
+## revoke_all e2e (2026-11-02, asset `EEkvCt6wMwNogCDiHuUyEru9WGeFmwtDfJFpzf2mmZha`)
+- `grant`: `fENm5bPngyKzonKaCvcZt3hogqqXFoSgda3ziKHAPQxzqTidZjLWW4iPd5v4PJ8rp47rAowfhPGPhKFsqXwaGMP`
+- `consume` 600: `5xijKScG1wUyWM1V75YUHb7mW58Cb3G8WkYRZNZvVD1g2JwaXMjncMhugPP2VeVE4qmBuzXEZsuDaG4itPdCmW9H`
+- `revoke_all`: `45nMfYepJxyFWyPLSWaDGcBHJANHv6YwErrzeD5Dh1i2M3KboVmcQo2gMVoKcuhyU922UdN8Txp7v4pLtaiTeW6D`. The next `consume` was rejected with `Revoked`.
+- The owner closed the revoked delegation: `48KPHdhx1id9zJtQ128fxzHY7t5bqkj8WZonCfXq6vJGiqo9wapatfVDaaWjHAZQVLXrnMsLXoG5EdEjJ5ziKtnd`
+- Re-grant at the new nonce: `34uLadATmQnmrbgf9SyAyVNwPLDoZ2wW2McqMwR7VX5XPsMzZNSYtZzRoJTgbTxw8hn1RZvmrKy33Kap8uvD75Ab`. The following `consume` succeeded: `5huh6U4V5Tx8FJvhNJ7fv2JoGE3GH9EeHdeYrNewtQ34NHizYeQ9X7eeGVYa18tgVX6JvWUR9TArMUv2b9ii7W98`
+- Over the cap and off the allowlist were rejected again. The consume after the transfer (`38BnfTQ3…`) was rejected.
+- Delegate close: `2TVd5cVQ…`. Sweeps: `4xZCgyEN…` and `5G8BXinW…`.
+
+There is no audit. Devnet only.
