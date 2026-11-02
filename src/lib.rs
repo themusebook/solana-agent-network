@@ -5,6 +5,7 @@ pub mod card;
 pub mod chain;
 pub mod config;
 pub mod daemon;
+pub mod helius;
 pub mod discovery;
 pub mod mailbox;
 pub mod mcp;

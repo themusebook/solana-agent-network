@@ -25,7 +25,7 @@ pub fn default_modules() -> Vec<Module> {
         m("imperial-perps", "adapter", false, "simulated"),
         m("phoenix-perps", "adapter", false, "simulated"),
         m("pump-fun", "adapter", false, "simulated"),
-        m("helius-core-ai", "skills", false, "planned"),
+        m("helius-core-ai", "skills", true, "vendored"),
     ]
 }
 
@@ -49,13 +49,16 @@ pub fn registration(i: &Input) -> Value {
         "registrations": [{"agentId": i.asset, "agentRegistry": format!("solana:devnet:{MPL_AGENT_IDENTITY}")}],
         "supportedTrust": ["reputation"],
         "modules": default_modules(),
+        "capabilities": crate::helius::capabilities(),
     })
 }
 
 /// Minimal A2A agent card.
 pub fn a2a_card(i: &Input) -> Value {
     let skills: Vec<Value> = default_modules().into_iter().filter(|m| m.enabled)
-        .map(|m| json!({"id": m.id, "name": m.id, "tags": [m.kind]})).collect();
+        .map(|m| json!({"id": m.id, "name": m.id, "tags": [m.kind]}))
+        .chain(crate::helius::capabilities()["skills"].as_array().unwrap().iter().map(|s| json!({"id": s["id"], "name": s["id"], "tags": ["skills"]})))
+        .collect();
     json!({"name": AGENT_NAME, "url": format!("{}/agents/{}/a2a", i.endpoint.trim_end_matches('/'), i.asset),
            "version": i.version.to_string(), "capabilities": {"streaming": false},
            "defaultInputModes": ["application/json"], "defaultOutputModes": ["application/json"], "skills": skills})
