@@ -8,6 +8,7 @@ pub mod daemon;
 pub mod discovery;
 pub mod mailbox;
 pub mod mcp;
+pub mod modules;
 pub mod registry;
 pub mod service;
 pub mod store;
